@@ -21,8 +21,28 @@ const ProtectedRoute = ({ children, adminOnly = true }: ProtectedRouteProps) => 
 
         if (currentUser && adminOnly) {
           // Check user profile for admin role
-          const profile = await supabaseService.getUserProfile(currentUser.id);
-          setUserProfile(profile);
+          try {
+            const profile = await supabaseService.getUserProfile(currentUser.id);
+            setUserProfile(profile);
+          } catch (error) {
+            // If profile doesn't exist, create it for admin users
+            if (currentUser.email === 'brnmontes.pe@gmail.com') {
+              try {
+                await supabaseService.updateUserProfile(currentUser.id, {
+                  nombre: 'Brayan Montes',
+                  rol: 'admin',
+                  activo: true,
+                });
+                const newProfile = await supabaseService.getUserProfile(currentUser.id);
+                setUserProfile(newProfile);
+              } catch (createError) {
+                console.error('Error creating user profile:', createError);
+                setUserProfile(null);
+              }
+            } else {
+              setUserProfile(null);
+            }
+          }
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
@@ -42,8 +62,28 @@ const ProtectedRoute = ({ children, adminOnly = true }: ProtectedRouteProps) => 
         setUser(currentUser);
         
         if (currentUser && adminOnly) {
-          const profile = await supabaseService.getUserProfile(currentUser.id);
-          setUserProfile(profile);
+          try {
+            const profile = await supabaseService.getUserProfile(currentUser.id);
+            setUserProfile(profile);
+          } catch (error) {
+            // If profile doesn't exist, create it for admin users
+            if (currentUser.email === 'brnmontes.pe@gmail.com') {
+              try {
+                await supabaseService.updateUserProfile(currentUser.id, {
+                  nombre: 'Brayan Montes',
+                  rol: 'admin',
+                  activo: true,
+                });
+                const newProfile = await supabaseService.getUserProfile(currentUser.id);
+                setUserProfile(newProfile);
+              } catch (createError) {
+                console.error('Error creating user profile:', createError);
+                setUserProfile(null);
+              }
+            } else {
+              setUserProfile(null);
+            }
+          }
         } else {
           setUserProfile(null);
         }

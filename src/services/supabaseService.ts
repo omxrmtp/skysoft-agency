@@ -183,17 +183,17 @@ class SupabaseService {
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error) throw error;
     return data;
   }
 
   async updateUserProfile(userId: string, updates: Partial<Database['public']['Tables']['user_profiles']['Update']>) {
+    // First try to update, if no rows exist, insert
     const { data, error } = await this.supabase
       .from('user_profiles')
-      .update(updates)
-      .eq('id', userId)
+      .upsert({ id: userId, ...updates })
       .select()
       .single();
 
