@@ -74,7 +74,9 @@ const Setup = () => {
     }
   };
 
-  // Solo mostrar en desarrollo
+  // Temporalmente habilitado en producción para configuración inicial
+  // TODO: Descomentar después de configurar el usuario administrador
+  /*
   if (import.meta.env.PROD) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -87,6 +89,7 @@ const Setup = () => {
       </div>
     );
   }
+  */
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">
