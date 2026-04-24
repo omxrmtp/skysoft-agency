@@ -14,6 +14,7 @@ type Project = {
   deadline: string;
 };
 
+// TODO: Replace with real data from Supabase
 const seed: Project[] = [
   { id: "p1", name: "Plataforma SaaS Acme", client: "Acme Inc.", status: "Desarrollo", budget: 24000, deadline: "2025-06-12" },
   { id: "p2", name: "Tienda Romime", client: "Romime", status: "Diseño", budget: 12500, deadline: "2025-05-04" },

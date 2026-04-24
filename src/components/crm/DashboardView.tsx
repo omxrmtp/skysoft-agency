@@ -1,5 +1,6 @@
 import { ArrowDownRight, ArrowUpRight, DollarSign, Target, Users, Briefcase } from "lucide-react";
 
+// TODO: Replace with real data from Supabase
 const stats = [
   { label: "Leads hoy", value: "24", delta: "+12%", up: true, icon: Users, hue: "primary" as const },
   { label: "Proyectos activos", value: "18", delta: "+3", up: true, icon: Briefcase, hue: "accent" as const },
@@ -7,6 +8,7 @@ const stats = [
   { label: "Ingresos MRR", value: "$48.2k", delta: "-1.8%", up: false, icon: DollarSign, hue: "accent" as const },
 ];
 
+// TODO: Replace with real pipeline data from Supabase
 const radials = [
   { label: "Briefing", value: 92, color: "primary" as const },
   { label: "Diseño", value: 76, color: "accent" as const },
@@ -14,6 +16,7 @@ const radials = [
   { label: "Lanzamiento", value: 34, color: "accent" as const },
 ];
 
+// TODO: Replace with real project data from Supabase
 const recent = [
   { name: "Plataforma SaaS Acme", status: "En desarrollo", progress: 64, owner: "DM" },
   { name: "Tienda Romime", status: "Diseño", progress: 38, owner: "JR" },

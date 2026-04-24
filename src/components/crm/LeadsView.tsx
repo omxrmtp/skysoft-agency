@@ -16,6 +16,7 @@ type Lead = {
   budget: string;
 };
 
+// TODO: Replace with real data from Supabase
 const initial: Lead[] = [
   { id: "l1", name: "Marina Costa", company: "Lumen Studio", email: "marina@lumen.io", phone: "+34 612 345 678", message: "Necesitamos rediseñar nuestra plataforma SaaS y migrarla a Next.js.", status: "Nuevo", date: "Hace 2h", budget: "$25k - $50k" },
   { id: "l2", name: "Diego Rivera", company: "Holacasa", email: "diego@holacasa.mx", phone: "+52 55 8765 4321", message: "Buscamos una agencia para construir un marketplace de inmuebles.", status: "Nuevo", date: "Hace 5h", budget: "$60k+" },
