@@ -66,9 +66,9 @@ export function Navbar() {
             <Link to="/login">
               <Button variant="glass" size="sm">CRM</Button>
             </Link>
-            <a href="#contacto">
+            <Link to="/register">
               <Button variant="hero" size="sm">Hablemos</Button>
-            </a>
+            </Link>
           </div>
 
           <button
@@ -103,9 +103,9 @@ export function Navbar() {
               <Link to="/login" className="contents">
                 <Button variant="glass" className="w-full">CRM</Button>
               </Link>
-              <a href="#contacto" className="contents">
+              <Link to="/register" className="contents">
                 <Button variant="hero" className="w-full">Hablemos</Button>
-              </a>
+              </Link>
             </div>
           </div>
         </div>

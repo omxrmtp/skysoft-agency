@@ -1,5 +1,6 @@
 import { ArrowRight, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 
 export function Hero() {
@@ -48,12 +49,12 @@ export function Hero() {
           </p>
 
           <div className="reveal mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="#contacto">
+            <Link to="/register">
               <Button variant="hero" size="xl" className="group">
                 Iniciar mi proyecto
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
-            </a>
+            </Link>
             <a href="#portfolio">
               <Button variant="glass" size="xl">
                 Ver portfolio

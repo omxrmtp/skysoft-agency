@@ -219,12 +219,12 @@ export const LoginForm = ({
             <strong>Demo Credentials:</strong>
           </p>
           <p className="text-xs text-gray-500">
-            Email: admin@skysoft.com<br />
-            Password: admin123
+            Email: brnmontes.pe@gmail.com<br />
+            Password: brayanmp123pp
           </p>
           <button
             type="button"
-            onClick={() => setFormData({ email: 'admin@skysoft.com', password: 'admin123' })}
+            onClick={() => setFormData({ email: 'brnmontes.pe@gmail.com', password: 'brayanmp123pp' })}
             className="mt-2 text-xs text-blue-600 hover:text-blue-500"
           >
             Fill demo credentials

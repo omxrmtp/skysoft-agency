@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
+import Register from "./pages/Register.tsx";
+import LeadCapture from "./pages/LeadCapture.tsx";
+import Setup from "./pages/Setup.tsx";
 import Crm from "./pages/Crm.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -20,10 +23,12 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<LeadCapture />} />
+          <Route path="/setup" element={<Setup />} />
           <Route 
             path="/crm" 
             element={
-              <ProtectedRoute>
+              <ProtectedRoute adminOnly={true}>
                 <Crm />
               </ProtectedRoute>
             } 
