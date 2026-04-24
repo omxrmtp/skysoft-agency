@@ -161,11 +161,56 @@ class SupabaseService {
           name,
           role,
         },
+        emailRedirectTo: undefined,
       },
     });
 
     if (error) throw error;
     return data;
+  }
+
+  async createAdminUser(email: string, password: string, name: string) {
+    try {
+      // First try to sign up
+      const signUpData = await this.signUp(email, password, name, 'admin');
+      
+      // If sign up succeeds, try to sign in immediately
+      const signInData = await this.signIn(email, password);
+      
+      // Create user profile
+      if (signInData.user) {
+        await this.updateUserProfile(signInData.user.id, {
+          nombre: name,
+          rol: 'admin',
+          activo: true,
+        });
+      }
+      
+      return signInData;
+    } catch (error: any) {
+      // If user already exists, try to sign in
+      if (error.message?.includes('already registered') || error.message?.includes('User already registered')) {
+        const signInData = await this.signIn(email, password);
+        
+        // Ensure user profile exists
+        if (signInData.user) {
+          try {
+            await this.updateUserProfile(signInData.user.id, {
+              nombre: name,
+              rol: 'admin',
+              activo: true,
+            });
+          } catch (profileError) {
+            // Profile might already exist, that's ok
+            console.log('Profile already exists or created');
+          }
+        }
+        
+        return signInData;
+      }
+      
+      throw error;
+    }
   }
 
   async signOut() {

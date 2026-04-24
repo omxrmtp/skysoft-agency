@@ -15,41 +15,30 @@ const Setup = () => {
     setResult(null);
 
     try {
-      // Intentar registrar el usuario
-      const authData = await supabaseService.signUp(
+      // Usar la nueva función que maneja todo el proceso
+      const authData = await supabaseService.createAdminUser(
         "brnmontes.pe@gmail.com",
         "brayanmp123pp",
-        "Brayan Montes",
-        "admin"
+        "Brayan Montes"
       );
 
-      if (authData.user) {
-        // Crear perfil de usuario
-        await supabaseService.updateUserProfile(authData.user.id, {
-          nombre: "Brayan Montes",
-          rol: "admin",
-          activo: true,
-        });
-
-        setResult({
-          success: true,
-          message: "Usuario administrador creado exitosamente. Ahora puedes iniciar sesión."
-        });
-      }
-    } catch (error: any) {
-      console.error("Error creating user:", error);
+      setResult({
+        success: true,
+        message: "Usuario administrador creado y sesión iniciada. Redirigiendo al CRM..."
+      });
       
-      if (error.message?.includes("already registered")) {
-        setResult({
-          success: true,
-          message: "El usuario ya existe. Ya puedes iniciar sesión con tus credenciales."
-        });
-      } else {
-        setResult({
-          success: false,
-          message: `Error: ${error.message || "No se pudo crear el usuario"}`
-        });
-      }
+      // Redirigir después de un breve momento
+      setTimeout(() => {
+        navigate("/crm");
+      }, 1500);
+      
+    } catch (error: any) {
+      console.error("Error creating admin user:", error);
+      
+      setResult({
+        success: false,
+        message: `Error: ${error.message || "No se pudo crear el usuario administrador"}`
+      });
     } finally {
       setIsLoading(false);
     }
