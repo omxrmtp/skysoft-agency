@@ -1,12 +1,27 @@
 /**
  * useLeads Hook
  * 
- * Custom React hook for managing lead state and operations
+ * Custom React hook for managing lead state and operations with Supabase
  * Handles lead creation, fetching, and status updates with proper error handling
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { apiService, Lead, LeadFormData, PaginatedResponse } from '../services/apiService';
+import { supabaseService } from '../services/supabaseService';
+
+// Types from Supabase
+type Lead = {
+  id: string;
+  nombre: string;
+  correo: string;
+  telefono: string;
+  mensaje: string;
+  servicio_id: string;
+  estado_gestion: 'nuevo' | 'contactado' | 'cerrado';
+  fecha_registro: string;
+  ultima_actualizacion: string;
+};
+
+type LeadFormData = Omit<Lead, 'id' | 'fecha_registro' | 'ultima_actualizacion'>;
 
 export interface UseLeadsOptions {
   autoFetch?: boolean;
@@ -14,10 +29,10 @@ export interface UseLeadsOptions {
   initialLimit?: number;
   filters?: {
     status?: string;
-    service?: number;
+    service?: string;
     search?: string;
-    date_from?: string;
-    date_to?: string;
+    dateFrom?: string;
+    dateTo?: string;
   };
 }
 
@@ -40,17 +55,22 @@ export interface UseLeadsReturn {
   
   // Actions
   fetchLeads: (page?: number, limit?: number, filters?: UseLeadsOptions['filters']) => Promise<void>;
-  fetchLead: (id: number) => Promise<Lead | null>;
+  fetchLead: (id: string) => Promise<Lead | null>;
   createLead: (leadData: LeadFormData) => Promise<Lead | null>;
-  updateLeadStatus: (id: number, status: 'nuevo' | 'contactado' | 'cerrado') => Promise<boolean>;
-  deleteLead: (id: number) => Promise<boolean>;
+  updateLeadStatus: (id: string, status: 'nuevo' | 'contactado' | 'cerrado') => Promise<boolean>;
+  deleteLead: (id: string) => Promise<boolean>;
   exportLeads: (filters?: UseLeadsOptions['filters']) => Promise<void>;
   refreshLeads: () => Promise<void>;
   
   // State management
+  setFilters: (filters: UseLeadsOptions['filters']) => void;
   clearError: () => void;
   setCurrentLead: (lead: Lead | null) => void;
-  setFilters: (filters: UseLeadsOptions['filters']) => void;
+  
+  // Form helpers
+  formData: LeadFormData;
+  handleInputChange: (field: keyof LeadFormData) => (value: string) => void;
+  resetForm: () => void;
 }
 
 export const useLeads = (options: UseLeadsOptions = {}): UseLeadsReturn => {
@@ -86,15 +106,27 @@ export const useLeads = (options: UseLeadsOptions = {}): UseLeadsReturn => {
       setLoading(true);
       setError(null);
 
-      const response = await apiService.getLeads({
+      const response = await supabaseService.getLeads({
         page: page || pagination.currentPage,
         limit: limit || pagination.perPage,
-        ...filters,
-        ...currentFilters,
+        status: filters?.status || currentFilters?.status,
+        service: filters?.service || currentFilters?.service,
+        search: filters?.search || currentFilters?.search,
+        dateFrom: filters?.dateFrom || currentFilters?.dateFrom,
+        dateTo: filters?.dateTo || currentFilters?.dateTo,
       });
 
-      setLeads(response.data);
-      setPagination(response.pagination);
+      setLeads(response.data || []);
+      if (response.pagination) {
+        setPagination({
+          currentPage: response.pagination.current_page,
+          perPage: response.pagination.per_page,
+          total: response.pagination.total,
+          totalPages: response.pagination.total_pages,
+          hasNext: response.pagination.has_next,
+          hasPrev: response.pagination.has_prev,
+        });
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch leads';
       setError(errorMessage);
@@ -104,13 +136,11 @@ export const useLeads = (options: UseLeadsOptions = {}): UseLeadsReturn => {
     }
   }, [pagination.currentPage, pagination.perPage, currentFilters]);
 
-  // Fetch single lead
-  const fetchLead = useCallback(async (id: number): Promise<Lead | null> => {
+  // Fetch single lead - Note: getLead doesn't exist in supabaseService, so we'll find it in the leads array
+  const fetchLead = useCallback(async (id: string): Promise<Lead | null> => {
     try {
-      setLoading(true);
       setError(null);
-
-      const lead = await apiService.getLead(id);
+      const lead = leads.find(l => l.id === id) || null;
       setCurrentLead(lead);
       return lead;
     } catch (err) {
@@ -118,24 +148,26 @@ export const useLeads = (options: UseLeadsOptions = {}): UseLeadsReturn => {
       setError(errorMessage);
       console.error('Error fetching lead:', err);
       return null;
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [leads]);
 
   // Create new lead
   const createLead = useCallback(async (leadData: LeadFormData): Promise<Lead | null> => {
     try {
-      setLoading(true);
       setError(null);
+      
+      // Add default status if not provided
+      const leadWithDefaults = {
+        ...leadData,
+        estado_gestion: 'nuevo' as const,
+        telefono: leadData.telefono || '',
+        servicio_id: leadData.servicio_id || '',
+      };
 
-      const newLead = await apiService.createLead(leadData);
+      const newLead = await supabaseService.createLead(leadWithDefaults);
       
-      // Add to local state if successful
-      setLeads(prev => [newLead, ...prev]);
-      
-      // Show success notification (you could integrate with a toast library)
-      console.log('Lead created successfully:', newLead);
+      // Refresh leads list
+      await fetchLeads();
       
       return newLead;
     } catch (err) {
@@ -143,91 +175,94 @@ export const useLeads = (options: UseLeadsOptions = {}): UseLeadsReturn => {
       setError(errorMessage);
       console.error('Error creating lead:', err);
       return null;
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [fetchLeads]);
 
   // Update lead status
-  const updateLeadStatus = useCallback(async (
-    id: number,
-    status: 'nuevo' | 'contactado' | 'cerrado'
-  ): Promise<boolean> => {
+  const updateLeadStatus = useCallback(async (id: string, status: 'nuevo' | 'contactado' | 'cerrado'): Promise<boolean> => {
     try {
-      setLoading(true);
       setError(null);
-
-      await apiService.updateLeadStatus(id, status);
+      await supabaseService.updateLeadStatus(id, status);
       
       // Update local state
       setLeads(prev => prev.map(lead => 
         lead.id === id ? { ...lead, estado_gestion: status } : lead
       ));
       
-      // Update current lead if it's the same
-      if (currentLead && currentLead.id === id) {
-        setCurrentLead({ ...currentLead, estado_gestion: status });
-      }
-      
-      console.log(`Lead ${id} status updated to ${status}`);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update lead status';
       setError(errorMessage);
       console.error('Error updating lead status:', err);
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [currentLead]);
+  }, []);
 
   // Delete lead
-  const deleteLead = useCallback(async (id: number): Promise<boolean> => {
+  const deleteLead = useCallback(async (id: string): Promise<boolean> => {
     try {
-      setLoading(true);
       setError(null);
-
-      await apiService.deleteLead(id);
+      await supabaseService.deleteLead(id);
       
-      // Remove from local state
+      // Update local state
       setLeads(prev => prev.filter(lead => lead.id !== id));
       
-      // Clear current lead if it's the same
-      if (currentLead && currentLead.id === id) {
-        setCurrentLead(null);
-      }
-      
-      console.log(`Lead ${id} deleted successfully`);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete lead';
       setError(errorMessage);
       console.error('Error deleting lead:', err);
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [currentLead]);
+  }, []);
 
-  // Export leads
+  // Export leads - Note: exportLeads doesn't exist in supabaseService, so we'll implement a simple CSV export
   const exportLeads = useCallback(async (filters?: UseLeadsOptions['filters']): Promise<void> => {
     try {
-      setLoading(true);
       setError(null);
+      setLoading(true);
+      
+      // Get filtered leads
+      const response = await supabaseService.getLeads({
+        page: 1,
+        limit: 1000, // Get all leads for export
+        status: filters?.status || currentFilters?.status,
+        service: filters?.service || currentFilters?.service,
+        search: filters?.search || currentFilters?.search,
+        dateFrom: filters?.dateFrom || currentFilters?.dateFrom,
+        dateTo: filters?.dateTo || currentFilters?.dateTo,
+      });
 
-      const blob = await apiService.exportLeads(filters || currentFilters);
+      // Create CSV content
+      const csvContent = [
+        ['ID', 'Nombre', 'Correo', 'Teléfono', 'Mensaje', 'Servicio', 'Estado', 'Fecha Registro']
+      ];
       
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `leads_export_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      response.data.forEach(lead => {
+        csvContent.push([
+          lead.id,
+          lead.nombre,
+          lead.correo,
+          lead.telefono,
+          lead.mensaje,
+          lead.servicio_id,
+          lead.estado_gestion,
+          lead.fecha_registro
+        ]);
+      });
+
+      // Create and download CSV
+      const csvString = csvContent.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       
-      console.log('Leads exported successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to export leads';
       setError(errorMessage);
@@ -239,37 +274,62 @@ export const useLeads = (options: UseLeadsOptions = {}): UseLeadsReturn => {
 
   // Refresh leads (re-fetch with current parameters)
   const refreshLeads = useCallback(async (): Promise<void> => {
-    await fetchLeads(pagination.currentPage, pagination.perPage, currentFilters);
-  }, [fetchLeads, pagination.currentPage, pagination.perPage, currentFilters]);
-
-  // Clear error
-  const clearError = useCallback((): void => {
-    setError(null);
-  }, []);
+    await fetchLeads();
+  }, [fetchLeads]);
 
   // Set filters
-  const setFilters = useCallback((filters: UseLeadsOptions['filters']): void => {
+  const setFilters = useCallback((filters: UseLeadsOptions['filters']) => {
     setCurrentFilters(filters);
   }, []);
 
-  // Auto-fetch on mount
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  // Auto fetch on mount
   useEffect(() => {
     if (autoFetch) {
-      fetchLeads(initialPage, initialLimit, initialFilters);
+      fetchLeads();
     }
-  }, [autoFetch, fetchLeads, initialPage, initialLimit]);
+  }, [autoFetch, fetchLeads]);
+
+  // Form state for lead creation
+  const [formData, setFormData] = useState<LeadFormData>({
+    nombre: '',
+    correo: '',
+    telefono: '',
+    mensaje: '',
+    servicio_id: '',
+    estado_gestion: 'nuevo',
+  } as LeadFormData);
+
+  // Handle form input changes
+  const handleInputChange = useCallback((field: keyof LeadFormData) => (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  }, []);
+
+  // Reset form
+  const resetForm = useCallback(() => {
+    setFormData({
+      nombre: '',
+      correo: '',
+      telefono: '',
+      mensaje: '',
+      servicio_id: '',
+      estado_gestion: 'nuevo',
+    } as LeadFormData);
+  }, []);
 
   return {
-    // Data
     leads,
     currentLead,
     loading,
     error,
-    
-    // Pagination
     pagination,
-    
-    // Actions
     fetchLeads,
     fetchLead,
     createLead,
@@ -277,11 +337,13 @@ export const useLeads = (options: UseLeadsOptions = {}): UseLeadsReturn => {
     deleteLead,
     exportLeads,
     refreshLeads,
-    
-    // State management
+    setFilters,
     clearError,
     setCurrentLead,
-    setFilters,
+    // Form helpers
+    formData,
+    handleInputChange,
+    resetForm,
   };
 };
 
@@ -295,12 +357,12 @@ export const useLeadStats = () => {
     try {
       setLoading(true);
       setError(null);
-
-      const leadStats = await apiService.getLeadStats();
-      setStats(leadStats);
+      const dashboardStats = await supabaseService.getDashboardStats();
+      setStats(dashboardStats);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch lead statistics';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch stats';
       setError(errorMessage);
+      console.error('Error fetching stats:', err);
       console.error('Error fetching lead stats:', err);
     } finally {
       setLoading(false);
@@ -326,8 +388,9 @@ export const useLeadForm = (initialLead?: Partial<LeadFormData>) => {
     correo: initialLead?.correo || '',
     telefono: initialLead?.telefono || '',
     mensaje: initialLead?.mensaje || '',
-    servicio_id: initialLead?.servicio_id || undefined,
-  });
+    servicio_id: initialLead?.servicio_id || '',
+    estado_gestion: 'nuevo',
+  } as LeadFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -369,8 +432,9 @@ export const useLeadForm = (initialLead?: Partial<LeadFormData>) => {
       correo: '',
       telefono: '',
       mensaje: '',
-      servicio_id: undefined,
-    });
+      servicio_id: '',
+      estado_gestion: 'nuevo',
+    } as LeadFormData);
     setErrors({});
   }, []);
 
@@ -381,7 +445,12 @@ export const useLeadForm = (initialLead?: Partial<LeadFormData>) => {
 
     setIsSubmitting(true);
     try {
-      const newLead = await apiService.createLead(formData);
+      const newLead = await supabaseService.createLead({
+        ...formData,
+        estado_gestion: 'nuevo',
+        telefono: formData.telefono || '',
+        servicio_id: formData.servicio_id || '',
+      });
       resetForm();
       return newLead;
     } catch (err) {
