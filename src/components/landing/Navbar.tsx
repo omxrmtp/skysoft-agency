@@ -63,7 +63,7 @@ export function Navbar() {
           </ul>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/crm">
+            <Link to="/login">
               <Button variant="glass" size="sm">CRM</Button>
             </Link>
             <a href="#contacto">
@@ -100,7 +100,7 @@ export function Navbar() {
               </a>
             ))}
             <div className="grid grid-cols-2 gap-2 mt-3">
-              <Link to="/crm" className="contents">
+              <Link to="/login" className="contents">
                 <Button variant="glass" className="w-full">CRM</Button>
               </Link>
               <a href="#contacto" className="contents">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -11,8 +11,11 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabaseService } from "@/services/supabaseService";
+import { useToast } from "@/hooks/use-toast";
 
 type View = "dashboard" | "projects" | "leads";
 
@@ -32,6 +35,25 @@ export function CrmShell({
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await supabaseService.signOut();
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión correctamente.",
+      });
+      navigate("/login");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo cerrar la sesión.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen flex w-full bg-background">
@@ -89,11 +111,12 @@ export function CrmShell({
             </p>
           )}
           {[
-            { label: "Clientes", icon: Users },
-            { label: "Ajustes", icon: Settings },
+            { label: "Clientes", icon: Users, action: () => toast({ title: "Clientes", description: "Vista de clientes en desarrollo" }) },
+            { label: "Ajustes", icon: Settings, action: () => toast({ title: "Ajustes", description: "Configuración en desarrollo" }) },
           ].map((i) => (
             <button
               key={i.label}
+              onClick={i.action}
               className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
             >
               <i.icon className="h-4 w-4 shrink-0" />
@@ -176,11 +199,24 @@ export function CrmShell({
 
             <div className="flex items-center gap-3 pl-3 border-l border-border/60">
               <div className="hidden sm:block text-right leading-tight">
-                <p className="text-xs font-medium">Ada Lovelace</p>
-                <p className="text-[10px] text-muted-foreground">Lead PM</p>
+                <p className="text-xs font-medium">Usuario CRM</p>
+                <p className="text-[10px] text-muted-foreground">Administrador</p>
               </div>
-              <div className="h-9 w-9 rounded-full bg-gradient-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-elegant">
-                AL
+              <div className="relative group">
+                <div className="h-9 w-9 rounded-full bg-gradient-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-elegant cursor-pointer">
+                  U
+                </div>
+                <div className="absolute right-0 top-full mt-2 w-48 glass rounded-lg shadow-elegant opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="p-2">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 rounded transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Cerrar sesión
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
