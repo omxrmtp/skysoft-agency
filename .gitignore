@@ -111,3 +111,9 @@ dist-ssr/
 
 # Supabase
 .supabase/
+
+# Database files (should not be in repository)
+database/
+*.sql
+*.sql.gz
+*.dump
