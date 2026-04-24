@@ -117,3 +117,6 @@ database/
 *.sql
 *.sql.gz
 *.dump
+
+# Legacy PHP API (replaced by Supabase)
+api/
